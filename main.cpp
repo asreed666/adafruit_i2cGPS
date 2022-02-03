@@ -4,7 +4,7 @@
 #include "externs.h"
 
 I2C i2c(P6_1, P6_0);
-Serial pc(USBTX, USBRX, 115200);
+//Serial pc(USBTX, USBRX, 115200);
 I2CGPS myI2CGPS;
 string configString;
 
@@ -20,21 +20,21 @@ static void printStr(const char *str, int len);
 int main() {
 
   while (myI2CGPS.begin(i2c, 400000) == false) {
-    pc.printf("Module failed to respond. Please check wiring.\n");
+    printf("Module failed to respond. Please check wiring.\n");
     ThisThread::sleep_for(500);
   }
-  pc.printf("GPS module found!\n");
-  pc.printf("Testing TinyGPS++ library v. ");
-  pc.printf("%s", TinyGPSPlus::libraryVersion());
-  pc.printf("by Mikal Hart and adapted for Mbed by asr\n");
+  printf("GPS module found!\n");
+  printf("Testing TinyGPS++ library v. ");
+  printf("%s", TinyGPSPlus::libraryVersion());
+  printf("by Mikal Hart and adapted for Mbed by asr\n");
 
-  pc.printf(
+  printf(
       "Sats HDOP Latitude   Longitude   Fix  Date       Time     Date Alt    "
       "Course Speed Card  Distance Course Card  Chars Sentences Checksum\n");
-  pc.printf(
+  printf(
       "          (deg)      (deg)       Age                      Age  (m)    "
       "--- from GPS ----  ---- to London  ----  RX    RX        Fail\n");
-  pc.printf(
+  printf(
       "------------------------------------------------------------------------"
       "---------------------------------------------------------------\n");
 
@@ -76,12 +76,12 @@ int main() {
     printInt(gps.charsProcessed(), true, 6);
     printInt(gps.sentencesWithFix(), true, 10);
     printInt(gps.failedChecksum(), true, 9);
-    pc.printf("\n");
+    printf("\n");
 
     smartDelay(1000);
 
     if (clock_ms() > 5000 && gps.charsProcessed() < 10)
-      pc.printf("No GPS data received: check wiring\n");
+      printf("No GPS data received: check wiring\n");
   }
 }
 /*
@@ -89,8 +89,8 @@ int main() {
                                  // available from the GPS module
     {
       uint8_t incoming = myI2CGPS.read(); //Read the latest byte from Qwiic GPS
-      if(incoming == '$') pc.printf("\n"); //Break the sentences onto new lines
-      pc.printf("%c", incoming); //Print this character
+      if(incoming == '$') printf("\n"); //Break the sentences onto new lines
+      printf("%c", incoming); //Print this character
     }
     smartDelay(1000);
   }
@@ -110,15 +110,15 @@ static void smartDelay(unsigned long ms) {
 static void printFloat(float val, bool valid, int len, int prec) {
   if (!valid) {
     while (len-- > 1)
-      pc.printf("*");
-    pc.printf(" ");
+      printf("*");
+    printf(" ");
   } else {
-    pc.printf("%5.2f ", val);
+    printf("%5.2f ", val);
     //    int vi = abs((int)val);
     //    int flen = prec + (val < 0.0 ? 2 : 1); // . and -
     //    flen += vi >= 1000 ? 4 : vi >= 100 ? 3 : vi >= 10 ? 2 : 1;
     //    for (int i=flen; i<len; ++i)
-    //      pc.printf(' ');
+    //      printf(' ');
   }
   smartDelay(0);
 }
@@ -132,25 +132,25 @@ static void printInt(unsigned long val, bool valid, int len) {
     sz[i] = ' ';
   if (len > 0)
     sz[len - 1] = ' ';
-  pc.printf("%s", sz);
+  printf("%s", sz);
   smartDelay(0);
 }
 
 static void printDateTime(TinyGPSDate &d, TinyGPSTime &t) {
   if (!d.isValid()) {
-    pc.printf("********** ");
+    printf("********** ");
   } else {
     char sz[32];
     sprintf(sz, "%02d/%02d/%02d ", d.month(), d.day(), d.year());
-    pc.printf("%s", sz);
+    printf("%s", sz);
   }
 
   if (!t.isValid()) {
-    pc.printf("******** ");
+    printf("******** ");
   } else {
     char sz[32];
     sprintf(sz, "%02d:%02d:%02d ", t.hour(), t.minute(), t.second());
-    pc.printf("%s", sz);
+    printf("%s", sz);
   }
 
   printInt(d.age(), d.isValid(), 5);
@@ -160,6 +160,6 @@ static void printDateTime(TinyGPSDate &d, TinyGPSTime &t) {
 static void printStr(const char *str, int len) {
   int slen = strlen(str);
   for (int i = 0; i < len; ++i)
-    pc.printf("%c", i < slen ? str[i] : ' ');
+    printf("%c", i < slen ? str[i] : ' ');
   smartDelay(0);
 }
