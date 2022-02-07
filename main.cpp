@@ -1,42 +1,47 @@
 #include "mbed.h"
 
+#include <iostream>
+#include <iomanip>
+
 #include "SparkFun_I2C_GPS_Arduino_Library.h"
+#include "SHT40.h"
 #include "externs.h"
 
 I2C i2c(P6_1, P6_0);
 //Serial pc(USBTX, USBRX, 115200);
 I2CGPS myI2CGPS;
+SHT40 sht40(P6_1, P6_0);
 string configString;
 
 // The TinyGPS++ object
 TinyGPSPlus gps;
 static void smartDelay(unsigned long ms);
-static void printFloat(float val, bool valid, int len, int prec);
+static void printFloat(double val, bool valid, int len, int prec);
 static void printInt(unsigned long val, bool valid, int len);
 static void printDateTime(TinyGPSDate &d, TinyGPSTime &t);
 static void printStr(const char *str, int len);
 
 // main() runs in its own thread in the OS
 int main() {
-
+  cout << "SHT40 From Adafruit"  << endl;
   while (myI2CGPS.begin(i2c, 400000) == false) {
-    printf("Module failed to respond. Please check wiring.\n");
+    cout<<("GPS Module failed to respond. Please check wiring.") << endl;
     ThisThread::sleep_for(500);
   }
-  printf("GPS module found!\n");
-  printf("Testing TinyGPS++ library v. ");
-  printf("%s", TinyGPSPlus::libraryVersion());
-  printf("by Mikal Hart and adapted for Mbed by asr\n");
+  cout << ("GPS module found!") << endl;
+  cout << ("Testing TinyGPS++ library v. ");
+  cout << ( TinyGPSPlus::libraryVersion());
+  cout << ("by Mikal Hart and adapted for Mbed by asr") << endl;
 
-  printf(
+  cout << (
       "Sats HDOP Latitude   Longitude   Fix  Date       Time     Date Alt    "
-      "Course Speed Card  Distance Course Card  Chars Sentences Checksum\n");
-  printf(
+      "Course Speed Card  Distance Course Card  Chars Sentences Checksum") << endl;
+  cout << (
       "          (deg)      (deg)       Age                      Age  (m)    "
-      "--- from GPS ----  ---- to London  ----  RX    RX        Fail\n");
-  printf(
+      "--- from GPS ----  ---- to London  ----  RX    RX        Fail")  << endl;
+  cout << (
       "------------------------------------------------------------------------"
-      "---------------------------------------------------------------\n");
+      "---------------------------------------------------------------") << endl;
 
   /* if GPS module is found let us configure it */
   // setup PPS LED
@@ -44,7 +49,8 @@ int main() {
   myI2CGPS.sendMTKpacket(configString);
 
   while (true) {
-    static const double LONDON_LAT = 51.508131, LONDON_LON = -0.128002;
+    static const double LONDON_LAT = 51.508131;
+    static const double LONDON_LON = -0.128002;
 
     printInt(gps.satellites.value(), gps.satellites.isValid(), 5);
     printInt(gps.hdop.value(), gps.hdop.isValid(), 5);
@@ -76,12 +82,13 @@ int main() {
     printInt(gps.charsProcessed(), true, 6);
     printInt(gps.sentencesWithFix(), true, 10);
     printInt(gps.failedChecksum(), true, 9);
-    printf("\n");
+    cout << endl;
 
     smartDelay(1000);
 
-    if (clock_ms() > 5000 && gps.charsProcessed() < 10)
-      printf("No GPS data received: check wiring\n");
+    if (clock_ms() > 5000 && gps.charsProcessed() < 10) {
+      cout << ("No GPS data received: check wiring") << endl;
+    }
   }
 }
 /*
@@ -107,13 +114,14 @@ static void smartDelay(unsigned long ms) {
   } while (clock_ms() - start < ms);
 }
 
-static void printFloat(float val, bool valid, int len, int prec) {
+static void printFloat(double val, bool valid, int len, int prec) {
   if (!valid) {
-    while (len-- > 1)
-      printf("*");
-    printf(" ");
+    while (len-- > 1) {
+      cout << ("*");
+    }
+    cout << (" ");
   } else {
-    printf("%5.2f ", val);
+    cout << std::setprecision(prec) << std::setw(len) << (val);
     //    int vi = abs((int)val);
     //    int flen = prec + (val < 0.0 ? 2 : 1); // . and -
     //    flen += vi >= 1000 ? 4 : vi >= 100 ? 3 : vi >= 10 ? 2 : 1;
@@ -132,17 +140,17 @@ static void printInt(unsigned long val, bool valid, int len) {
     sz[i] = ' ';
   if (len > 0)
     sz[len - 1] = ' ';
-  printf("%s", sz);
+  cout << (char *)sz;
   smartDelay(0);
 }
 
 static void printDateTime(TinyGPSDate &d, TinyGPSTime &t) {
   if (!d.isValid()) {
-    printf("********** ");
+    cout << ("********** ");
   } else {
     char sz[32];
-    sprintf(sz, "%02d/%02d/%02d ", d.month(), d.day(), d.year());
-    printf("%s", sz);
+    sprintf(sz, "%02d/%02d/%02d ", d.day(), d.month(), d.year());
+    cout << (char *)sz;
   }
 
   if (!t.isValid()) {
@@ -150,7 +158,7 @@ static void printDateTime(TinyGPSDate &d, TinyGPSTime &t) {
   } else {
     char sz[32];
     sprintf(sz, "%02d:%02d:%02d ", t.hour(), t.minute(), t.second());
-    printf("%s", sz);
+    cout << (char *) sz;
   }
 
   printInt(d.age(), d.isValid(), 5);
@@ -160,6 +168,6 @@ static void printDateTime(TinyGPSDate &d, TinyGPSTime &t) {
 static void printStr(const char *str, int len) {
   int slen = strlen(str);
   for (int i = 0; i < len; ++i)
-    printf("%c", i < slen ? str[i] : ' ');
+    cout << (i < slen ? str[i] : ' ');
   smartDelay(0);
 }
