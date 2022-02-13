@@ -5,6 +5,7 @@
         "*": {
             "platform.minimal-printf-enable-floating-point": true,
             "platform.minimal-printf-set-floating-point-max-decimals": 2,
+            "target.components_add": ["EMWIN_NOSNTS"],
             "target.printf_lib":"std",
             "platform.stdio-convert-newlines": true,
             "platform.stdio-baud-rate": 115200,

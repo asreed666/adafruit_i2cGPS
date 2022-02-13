@@ -3,6 +3,8 @@
 #include <iostream>
 #include <iomanip>
 
+#include "GUI.h"
+
 #include "SparkFun_I2C_GPS_Arduino_Library.h"
 #include "SHT40.h"
 #include "externs.h"
@@ -12,6 +14,11 @@ I2C i2c(P6_1, P6_0);
 I2CGPS myI2CGPS;
 SHT40 sht40(P6_1, P6_0);
 string configString;
+
+struct dataSet{
+    float temperature = 0;
+    float humidity = 0;
+}THData;
 
 // The TinyGPS++ object
 TinyGPSPlus gps;
@@ -23,7 +30,15 @@ static void printStr(const char *str, int len);
 
 // main() runs in its own thread in the OS
 int main() {
+      /* Initialise display */
+  GUI_Init();
+  GUI_Clear();
   cout << "SHT40 From Adafruit"  << endl;
+  GUI_SetFont(GUI_FONT_10_1);
+  GUI_SetTextAlign(GUI_TA_LEFT);
+  GUI_SetFont(GUI_FONT_20B_1);
+  GUI_DispStringAt("Telemetry Data", 0, 0);
+
   while (myI2CGPS.begin(i2c, 400000) == false) {
     cout<<("GPS Module failed to respond. Please check wiring.") << endl;
     ThisThread::sleep_for(500);
@@ -47,15 +62,49 @@ int main() {
   // setup PPS LED
   configString = myI2CGPS.createMTKpacket(285, ",4,25");
   myI2CGPS.sendMTKpacket(configString);
-
+  char lngBuff[32], latBuff[32];
+  char tempBuff[8], humBuff[8];
   while (true) {
     static const double LONDON_LAT = 51.508131;
     static const double LONDON_LON = -0.128002;
 
     printInt(gps.satellites.value(), gps.satellites.isValid(), 5);
+    GUI_DispStringAt("Num Stlts: ", 0, 40);
+    GUI_DispDecAt(gps.satellites.value(), 100, 40, 2);
     printInt(gps.hdop.value(), gps.hdop.isValid(), 5);
     printFloat(gps.location.lat(), gps.location.isValid(), 11, 6);
+    GUI_DispStringAt("latitude: ", 0, 60);
     printFloat(gps.location.lng(), gps.location.isValid(), 12, 6);
+    GUI_DispStringAt("longitude: ", 0, 80);
+    if (gps.location.isValid()) {
+        auto latitude = static_cast<float>(gps.location.lat());
+        bool latWest = (latitude < 0); // is position -ve 
+        latitude = fabs(latitude);
+        int latDeg=static_cast<int>(latitude);
+        latitude = (latitude - latDeg) * 60;
+        int latMin = static_cast<int>(latitude);
+        float latSec = (latitude - latMin) * 60;
+
+        auto lngitude = static_cast<float>(gps.location.lng());
+        bool lngSouth = (lngitude < 0); // is position -ve 
+        lngitude = fabs(lngitude);
+        int lngDeg=static_cast<int>(lngitude);
+        lngitude = (lngitude - lngDeg) * 60;
+        int lngMin = static_cast<int>(lngitude);
+        float lngSec = (lngitude - lngMin) * 60;
+
+        sprintf(latBuff,"%02d%c %02d\' %02.2f\" %s", latDeg, 176, latMin, latSec, latWest?"South":"North");
+        sprintf(lngBuff,"%02d%c %02d\' %02.2f\" %s", lngDeg, 176, lngMin, lngSec, lngSouth?"West":"East");
+//        sprintf(lngBuff,"%.2f", abs(gps.location.lng()));
+    }
+    else {
+        strcpy(latBuff, "**.**.****");
+        strcpy(lngBuff, "**.**.****");
+    }
+    smartDelay(0);
+    GUI_DispStringAt(latBuff, 100, 60);
+    GUI_DispStringAt(lngBuff, 100, 80);
+   
     printInt(gps.location.age(), gps.location.isValid(), 5);
     printDateTime(gps.date, gps.time);
     printFloat(gps.altitude.meters(), gps.altitude.isValid(), 7, 2);
@@ -82,6 +131,15 @@ int main() {
     printInt(gps.charsProcessed(), true, 6);
     printInt(gps.sentencesWithFix(), true, 10);
     printInt(gps.failedChecksum(), true, 9);
+    float tempC = THData.temperature;
+    float RH = THData.humidity;
+    printFloat(tempC, true, 6, 3);
+    sprintf(tempBuff,"Temperature: %2.1fC", tempC);
+    GUI_DispStringAt(tempBuff, 0, 100);
+    printFloat(RH, true, 6, 3);
+    sprintf(humBuff,"Relative Humidity: %2.1f%%", RH);
+    GUI_DispStringAt(humBuff, 0, 120);
+    
     cout << endl;
 
     smartDelay(1000);
@@ -108,6 +166,11 @@ int main() {
 // is being "fed".
 static void smartDelay(unsigned long ms) {
   unsigned long start = clock_ms();
+  if (ms > 500) {
+      THData.temperature = sht40.tempCF();
+      THData.humidity = sht40.relHumidF();
+  }
+    
   do {
     while (myI2CGPS.available())
       gps.encode(myI2CGPS.read());
@@ -150,6 +213,7 @@ static void printDateTime(TinyGPSDate &d, TinyGPSTime &t) {
   } else {
     char sz[32];
     sprintf(sz, "%02d/%02d/%02d ", d.day(), d.month(), d.year());
+    GUI_DispStringAt( sz, 0, 20);
     cout << (char *)sz;
   }
 
@@ -158,6 +222,7 @@ static void printDateTime(TinyGPSDate &d, TinyGPSTime &t) {
   } else {
     char sz[32];
     sprintf(sz, "%02d:%02d:%02d ", t.hour(), t.minute(), t.second());
+    GUI_DispStringAt( sz, 120, 20);
     cout << (char *) sz;
   }
 
