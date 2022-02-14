@@ -7,7 +7,33 @@
 
 #include "SparkFun_I2C_GPS_Arduino_Library.h"
 #include "SHT40.h"
+#include "MQTTThread.h"
+#include "display.h"
 #include "externs.h"
+#include "constants.h"
+
+struct things_t {
+    float lightLevelVal = 100.0;
+    float lightThreshVal = defLightThresh;
+    float temperatureVal= defTempThresh;
+    float tempThreshVal = defTempThresh;
+    float relHumidVal= 0.0;
+    float relHumidThreshVal = defHumidThresh;
+    float currLatitude = 0;
+    float currLongitude = 0;
+    bool redLedState = false;
+    bool greenLedState = false;
+    bool blueLedState = false;
+    bool statusLedState = false;
+    bool orangeLedState = false;
+    int rxCountVal = 0;
+    int txCountVal = 0;
+//    char ipAddress[17] = "192.168.1.xxx";
+    bool changed{};
+
+} __attribute__((aligned(align64))) ;
+
+things_t thingData;
 
 I2C i2c(P6_1, P6_0);
 //Serial pc(USBTX, USBRX, 115200);
@@ -28,16 +54,16 @@ static void printInt(unsigned long val, bool valid, int len);
 static void printDateTime(TinyGPSDate &d, TinyGPSTime &t);
 static void printStr(const char *str, int len);
 
+Thread mqttThreadHandle;
+Thread displayThreadHandle;
+bool dispUp = false;
+
 // main() runs in its own thread in the OS
 int main() {
-      /* Initialise display */
-  GUI_Init();
-  GUI_Clear();
-  cout << "SHT40 From Adafruit"  << endl;
-  GUI_SetFont(GUI_FONT_10_1);
-  GUI_SetTextAlign(GUI_TA_LEFT);
-  GUI_SetFont(GUI_FONT_20B_1);
-  GUI_DispStringAt("Telemetry Data", 0, 0);
+      /* Initialise display  and mqtt connections and launch threads*/
+
+  mqttThreadHandle.start(callback(mqttThread));
+  displayThreadHandle.start(callback(displayThread));
 
   while (myI2CGPS.begin(i2c, 400000) == false) {
     cout<<("GPS Module failed to respond. Please check wiring.") << endl;
@@ -48,6 +74,16 @@ int main() {
   cout << ( TinyGPSPlus::libraryVersion());
   cout << ("by Mikal Hart and adapted for Mbed by asr") << endl;
 
+  /* if GPS module is found let us configure it */
+  // setup PPS LED
+  while(dispUp == false) {
+      printf(".");
+      thread_sleep_for(1000);
+  }
+  configString = myI2CGPS.createMTKpacket(285, ",4,25");
+  myI2CGPS.sendMTKpacket(configString);
+
+  cout << "\033[20;1H";
   cout << (
       "Sats HDOP Latitude   Longitude   Fix  Date       Time     Date Alt    "
       "Course Speed Card  Distance Course Card  Chars Sentences Checksum") << endl;
@@ -57,44 +93,29 @@ int main() {
   cout << (
       "------------------------------------------------------------------------"
       "---------------------------------------------------------------") << endl;
-
-  /* if GPS module is found let us configure it */
-  // setup PPS LED
-  configString = myI2CGPS.createMTKpacket(285, ",4,25");
-  myI2CGPS.sendMTKpacket(configString);
   char lngBuff[32], latBuff[32];
-  char tempBuff[8], humBuff[8];
+  char tempBuff[32], humBuff[32];
+  auto currLat=0.0;
+  auto currLong=0.0;
   while (true) {
     static const double LONDON_LAT = 51.508131;
     static const double LONDON_LON = -0.128002;
-
+    cout << "\033[21;1H";
+  
     printInt(gps.satellites.value(), gps.satellites.isValid(), 5);
-    GUI_DispStringAt("Num Stlts: ", 0, 40);
-    GUI_DispDecAt(gps.satellites.value(), 100, 40, 2);
+//    GUI_DispStringAt("Num Stlts: ", 0, 40);
+//    GUI_DispDecAt(gps.satellites.value(), 100, 40, 2);
     printInt(gps.hdop.value(), gps.hdop.isValid(), 5);
     printFloat(gps.location.lat(), gps.location.isValid(), 11, 6);
-    GUI_DispStringAt("latitude: ", 0, 60);
+//    GUI_DispStringAt("latitude: ", 0, 60);
     printFloat(gps.location.lng(), gps.location.isValid(), 12, 6);
-    GUI_DispStringAt("longitude: ", 0, 80);
+//    GUI_DispStringAt("longitude: ", 0, 80);
     if (gps.location.isValid()) {
         auto latitude = static_cast<float>(gps.location.lat());
-        bool latWest = (latitude < 0); // is position -ve 
-        latitude = fabs(latitude);
-        int latDeg=static_cast<int>(latitude);
-        latitude = (latitude - latDeg) * 60;
-        int latMin = static_cast<int>(latitude);
-        float latSec = (latitude - latMin) * 60;
-
+        currLat = latitude;
         auto lngitude = static_cast<float>(gps.location.lng());
-        bool lngSouth = (lngitude < 0); // is position -ve 
-        lngitude = fabs(lngitude);
-        int lngDeg=static_cast<int>(lngitude);
-        lngitude = (lngitude - lngDeg) * 60;
-        int lngMin = static_cast<int>(lngitude);
-        float lngSec = (lngitude - lngMin) * 60;
+        currLong = lngitude;
 
-        sprintf(latBuff,"%02d%c %02d\' %02.2f\" %s", latDeg, 176, latMin, latSec, latWest?"South":"North");
-        sprintf(lngBuff,"%02d%c %02d\' %02.2f\" %s", lngDeg, 176, lngMin, lngSec, lngSouth?"West":"East");
 //        sprintf(lngBuff,"%.2f", abs(gps.location.lng()));
     }
     else {
@@ -102,9 +123,9 @@ int main() {
         strcpy(lngBuff, "**.**.****");
     }
     smartDelay(0);
-    GUI_DispStringAt(latBuff, 100, 60);
-    GUI_DispStringAt(lngBuff, 100, 80);
-   
+//    GUI_DispStringAt(latBuff, 100, 60);
+//    GUI_DispStringAt(lngBuff, 100, 80);
+
     printInt(gps.location.age(), gps.location.isValid(), 5);
     printDateTime(gps.date, gps.time);
     printFloat(gps.altitude.meters(), gps.altitude.isValid(), 7, 2);
@@ -135,12 +156,16 @@ int main() {
     float RH = THData.humidity;
     printFloat(tempC, true, 6, 3);
     sprintf(tempBuff,"Temperature: %2.1fC", tempC);
-    GUI_DispStringAt(tempBuff, 0, 100);
+//    GUI_DispStringAt(tempBuff, 0, 100);
     printFloat(RH, true, 6, 3);
     sprintf(humBuff,"Relative Humidity: %2.1f%%", RH);
-    GUI_DispStringAt(humBuff, 0, 120);
+//    GUI_DispStringAt(humBuff, 0, 120);
     
     cout << endl;
+    displayUpdate(LATITUDE_TOPIC, currLat);
+    displayUpdate(LONGITUDE_TOPIC, currLong);
+    displayUpdate(TEMPERATURE_TOPIC, tempC);
+    displayUpdate(REL_HUMIDITY_TOPIC , RH);
 
     smartDelay(1000);
 
@@ -172,8 +197,10 @@ static void smartDelay(unsigned long ms) {
   }
     
   do {
-    while (myI2CGPS.available())
+    while (myI2CGPS.available()) {
       gps.encode(myI2CGPS.read());
+    }
+  thread_sleep_for(1);
   } while (clock_ms() - start < ms);
 }
 
