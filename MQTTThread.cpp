@@ -149,9 +149,9 @@ void mqttThread() {
   int lastTxCount = 0;
   const char topicMap[NUM_TOPICS][TOPIC_LEN] = {
       "light",   "lightState", "lightSwitch", "redled", "greenled",
-      "blueled", "announce",   "lthresh",     "local",  "manual",
+      "blueled", "announce",   "lthresh",     "latitude",  "longitude",
       "temperature", "tempthresh", "rxCount", "txCount", "time", "statusled",
-      "orangeled", "heaterState", "heaterSwitch"};
+      "orangeled", "heaterState", "heaterSwitch", "humidity"};
 
 #ifdef MBED_MAJOR_VERSION
   printf("Mbed OS version %d.%d.%d\n\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION,

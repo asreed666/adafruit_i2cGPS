@@ -4,7 +4,7 @@
 void mqttThread();
 void sendPub( int topic, float value);
 //extern char ipAddress[];
-constexpr int NUM_TOPICS = 19;
+constexpr int NUM_TOPICS = 20;
 constexpr int TOPIC_LEN = 80;
 #ifdef TARGET_CY8CKIT_062_WIFI_BT
 #define FLIP 0

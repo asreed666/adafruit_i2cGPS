@@ -9,7 +9,7 @@
 #include "SHT40.h"
 #include "MQTTThread.h"
 #include "display.h"
-#include "externs.h"
+//#include "externs.h"
 #include "constants.h"
 
 struct things_t {
@@ -162,10 +162,15 @@ int main() {
 //    GUI_DispStringAt(humBuff, 0, 120);
     
     cout << endl;
+    bool publishIt = (gps.time.second() == 0);
     displayUpdate(LATITUDE_TOPIC, currLat);
+    if (publishIt == true) sendPub(LATITUDE_TOPIC, currLat);
     displayUpdate(LONGITUDE_TOPIC, currLong);
+    if (publishIt == true) sendPub(LONGITUDE_TOPIC, currLong);
     displayUpdate(TEMPERATURE_TOPIC, tempC);
+    if (publishIt == true) sendPub(TEMPERATURE_TOPIC, tempC);
     displayUpdate(REL_HUMIDITY_TOPIC , RH);
+    if (publishIt == true) sendPub(REL_HUMIDITY_TOPIC, RH);
 
     smartDelay(1000);
 
