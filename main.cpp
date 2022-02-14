@@ -35,6 +35,10 @@ struct things_t {
 
 things_t thingData;
 
+uint32_t timeToNext = 0;  // Timer for when to publish
+uint32_t period = 30;     // Periodicity of publishing
+bool publishIt = false;
+
 I2C i2c(P6_1, P6_0);
 //Serial pc(USBTX, USBRX, 115200);
 I2CGPS myI2CGPS;
@@ -162,7 +166,17 @@ int main() {
 //    GUI_DispStringAt(humBuff, 0, 120);
     
     cout << endl;
-    bool publishIt = (gps.time.second() == 0);
+
+    // Shall we send some data to the broker?
+
+    if (abs(clock_s()) >= timeToNext) {
+        publishIt = true;
+        timeToNext = abs(clock_s()) + period;
+    }
+    else {
+        publishIt = false;
+    }
+//    bool publishIt = (gps.time.second() == 0);
     displayUpdate(LATITUDE_TOPIC, currLat);
     if (publishIt == true) sendPub(LATITUDE_TOPIC, currLat);
     displayUpdate(LONGITUDE_TOPIC, currLong);
