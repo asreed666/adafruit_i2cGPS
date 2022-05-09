@@ -14,9 +14,9 @@ constexpr int TOPIC_LEN = 80;
 
 constexpr int LEDON = 0 ^ FLIP;  // active low on cy8ckit pioneer
 constexpr int LEDOFF = 1 ^ FLIP; // active low on cy8ckit pioneer
-constexpr auto MQTT_BROKER = "192.168.1.174";
-constexpr auto THING_NAME = "CCP01";
-constexpr auto SUBSCRIBE_TOPIC = "CCP01/lthresh";
+constexpr auto MQTT_BROKER = "192.168.1.176";
+constexpr auto THING_NAME = "CCP03";
+constexpr auto SUBSCRIBE_TOPIC = "CCP03/lthresh";
 constexpr auto LIGHT_LEVEL_TOPIC = 0;
 constexpr auto LIGHT_STATE_TOPIC = 1;
 constexpr auto LIGHT_SWITCH_TOPIC = 2;

@@ -1,0 +1,7 @@
+BUILD
+.mbed
+SHT40
+mbed-os
+mbed-mqtt
+emwin
+mbed-os-emwin-st7789v
